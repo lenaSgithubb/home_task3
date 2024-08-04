@@ -5,8 +5,16 @@
 using namespace std;
 
 template <typename T>
-struct logging_allocator {
-    using value_type = T;
+class logging_allocator {
+    //using value_type = T;
+private:
+    T* start;           // начало выделенного блока памяти
+    T* end;             // конец выделенного блока памяти
+    T* first_free;      // первый свободный элемент памяти
+    bool first_allocate;
+
+public:
+    typedef T value_type;
 
     using pointer = T *;
     using const_pointer = const T *;
@@ -18,12 +26,32 @@ struct logging_allocator {
         using other = logging_allocator<U>;
     };
 
-    logging_allocator():start(nullptr), end(nullptr), first_free(nullptr) {
+    logging_allocator(){
         std::cout << "logging_allocator constructor " << std::endl;
         first_allocate =  true;
+        start = 0;
+        end = 0;
+        first_free = 0;
     };
 
     ~logging_allocator() = default;
+
+    logging_allocator& operator = (const logging_allocator&) noexcept {
+        // noop
+        return *this;
+    }
+
+    logging_allocator& operator = (logging_allocator&& other) noexcept {
+        clear();
+        start = other.start;
+        end = other.end;
+        first_allocate = other.first_allocate;
+        first_free = other.first_free;
+        other.start = nullptr;
+        other.end = nullptr;
+        other.first_free = nullptr;
+        return *this;
+    }
 
     template <typename U>
     logging_allocator(const logging_allocator<U> &) {
@@ -81,16 +109,21 @@ struct logging_allocator {
         p->~U();
     }
 
-    T* start;           // начало выделенного блока памяти
-    T* end;             // конец выделенного блока памяти
-    T* first_free;      // первый свободный элемент памяти
-    bool first_allocate;
 };
 
+template <typename T, typename U>
+inline bool operator == (const logging_allocator<T>&, const logging_allocator<U>&) {
+    return true;
+}
+
+template <typename T, typename U>
+inline bool operator != (const logging_allocator<T>&, const logging_allocator<U>&) {
+    return false;
+}
 
 int main()
 {
-    auto v = std::vector<int, logging_allocator<int>>{};
+   std::vector<int, logging_allocator<int>> v;
         //v.reserve(5);
         for (int i = 0; i < 6; ++i) {
             std::cout << "vector size = " << v.size() << std::endl;
